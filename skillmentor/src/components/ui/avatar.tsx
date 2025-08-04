@@ -24,7 +24,10 @@ const AvatarImage = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Image
     ref={ref}
-    className={cn("aspect-square h-full w-full", className)}
+    // --- THIS IS THE FIX ---
+    // Added 'object-cover' to ensure the image covers the circle area
+    className={cn("aspect-square h-full w-full object-cover", className)}
+    // --- END OF FIX ---
     {...props}
   />
 ))
@@ -45,4 +48,4 @@ const AvatarFallback = React.forwardRef<
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-export { Avatar, AvatarImage, AvatarFallback } 
+export { Avatar, AvatarImage, AvatarFallback }

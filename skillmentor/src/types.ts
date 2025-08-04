@@ -77,3 +77,17 @@ export interface CreateClassroomRequest {
       mentor: Mentor;
       classes: MentorClassDto[];
   }
+
+  export interface AdminDashboardStatsDto {
+    totalMentors: number;
+    totalStudents: number;
+    totalClassrooms:number;
+    pendingSessions: number;
+    acceptedSessions: number;
+    completedSessions: number;
+  }
+
+  export interface DailyBookings {
+    date: string;
+    bookingCount: number;
+  }

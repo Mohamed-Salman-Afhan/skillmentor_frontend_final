@@ -27,9 +27,13 @@ api.interceptors.request.use(
 // ADMIN
 export const createClassroom = (data: CreateClassroomRequest) => api.post('/admin/classrooms', data);
 export const createMentor = (data: CreateMentorRequest) => api.post('/admin/mentors', data);
-export const getAdminBookings = () => api.get('/admin/bookings');
+export const getAdminBookings = (page: number, searchTerm: string) => 
+  api.get(`/admin/bookings?page=${page}&size=10&searchTerm=${searchTerm}`);
 export const approveBooking = (id: number) => api.put(`/admin/bookings/${id}/approve`);
 export const completeBooking = (id: number) => api.put(`/admin/bookings/${id}/complete`);
+export const getAdminDashboardStats = () => api.get('/admin/dashboard/stats');
+export const getDailyBookings = () => api.get('/admin/dashboard/daily-bookings');
+
 
 // STUDENT
 export const getStudentDashboard = () => api.get('/student/dashboard');

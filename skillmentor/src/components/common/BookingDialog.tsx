@@ -1,10 +1,5 @@
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,90 +7,102 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { createBooking, uploadFile } from "@/api";
 import type { Classroom, Mentor, CreateBookingRequest } from "@/types";
-import { useState, useRef } from "react"; 
-  
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Calendar, UploadCloud, ArrowRight } from "lucide-react";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+const bookingFormSchema = z.object({
+  sessionDateTime: z.string().min(1, "Session date and time are required.").refine((dateTime) => new Date(dateTime) > new Date(), {
+    message: "Booking date and time must be in the future.",
+  }),
+  bankSlip: z.instanceof(FileList)
+    .refine((files) => files?.length == 1, 'Payment slip is required.')
+    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max file size is 5MB.`)
+    .refine(
+      (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
+      'Only .jpg, .jpeg, .png and .webp formats are supported.'
+    ),
+});
+
+type BookingFormData = z.infer<typeof bookingFormSchema>;
+
 interface BookingDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    classroom: Classroom | null;
-    mentor: Mentor | null;
-  }
-  
-  export default function BookingDialog({ open, onOpenChange, classroom, mentor }: BookingDialogProps) {
-    const { toast } = useToast();
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [isSubmitting, setSubmitting] = useState(false);
-    const formRef = useRef<HTMLFormElement>(null); // <-- CREATE A REF FOR THE FORM
-  
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      if (!classroom || !mentor || !selectedFile) {
-          toast({ title: "Missing Information", description: "Please select a date and upload the payment slip.", variant: "destructive" });
-          return;
-      }
-      
-      // Check if the form ref is available
-      if (!formRef.current) {
-          return;
-      }
-  
-      setSubmitting(true);
-      try {
-        const fileResponse = await uploadFile(selectedFile);
-        const bankSlipUrl = fileResponse.data.url;
-  
-        // --- THIS IS THE FIX ---
-        // Use the ref to create FormData, which guarantees the correct element type.
-        const formData = new FormData(formRef.current);
-        const localDateTime = formData.get('sessionDateTime') as string;
-        const sessionDateTimeISO = new Date(localDateTime).toISOString();
-        // --- END OF FIX ---
-  
-        const bookingData: CreateBookingRequest = {
-          classroomId: classroom.id,
-          mentorId: mentor.id,
-          sessionDateTime: sessionDateTimeISO,
-          duration: 60,
-          bankSlipUrl: bankSlipUrl,
-        };
-  
-        await createBooking(bookingData);
-        toast({ title: "Success!", description: "Your session has been booked and is pending approval." });
-        onOpenChange(false);
-      } catch (error) {
-        console.error("Booking failed:", error);
-        toast({ title: "Booking Failed", description: "Could not create the booking. Please try again.", variant: "destructive" });
-      } finally {
-          setSubmitting(false);
-      }
-    };
-    
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Schedule Session</DialogTitle>
-            <DialogDescription>
-              Book a session for **{classroom?.name}** with **{mentor?.firstName} {mentor?.lastName}**.
-            </DialogDescription>
-          </DialogHeader>
-          {/* --- ATTACH THE REF TO THE FORM ELEMENT --- */}
-          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                  <Label htmlFor="sessionDateTime">Preferred Date & Time</Label>
-                  <Input id="sessionDateTime" name="sessionDateTime" type="datetime-local" required />
-              </div>
-              <div className="space-y-2">
-                  <Label htmlFor="bankSlip">Upload Payment Slip (Image)</Label>
-                  <Input id="bankSlip" type="file" required accept="image/*" onChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}/>
-              </div>
-              <DialogFooter>
-                  <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Booking..." : "Confirm Booking"}
-                  </Button>
-              </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  classroom: Classroom | null;
+  mentor: Mentor | null;
+}
+
+export default function BookingDialog({ open, onOpenChange, classroom, mentor }: BookingDialogProps) {
+  const { toast } = useToast();
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<BookingFormData>({
+    resolver: zodResolver(bookingFormSchema),
+  });
+
+  const onSubmit = async (formData: BookingFormData) => {
+    if (!classroom || !mentor) return;
+
+    try {
+      const file = formData.bankSlip[0];
+      const fileResponse = await uploadFile(file);
+      const bankSlipUrl = fileResponse.data.url;
+
+      const bookingData: CreateBookingRequest = {
+        classroomId: classroom.id,
+        mentorId: mentor.id,
+        sessionDateTime: new Date(formData.sessionDateTime).toISOString(),
+        duration: 60,
+        bankSlipUrl: bankSlipUrl,
+      };
+
+      await createBooking(bookingData);
+      toast({ title: "Success!", description: "Your session is booked and pending approval.", variant: "success" });
+      reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Booking failed:", error);
+      toast({ title: "Booking Failed", description: "Could not create the booking. Please try again.", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Schedule a Session</DialogTitle>
+          <DialogDescription>
+            You are booking a session for <span className="font-semibold text-primary">{classroom?.name}</span> with <span className="font-semibold text-primary">{mentor?.firstName} {mentor?.lastName}</span>.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
+            <div className="space-y-2">
+                <Label htmlFor="sessionDateTime" className="flex items-center">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Preferred Date & Time
+                </Label>
+                <Input id="sessionDateTime" type="datetime-local" {...register("sessionDateTime")} />
+                {errors.sessionDateTime && <p className="text-xs text-red-600">{errors.sessionDateTime.message}</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="bankSlip" className="flex items-center">
+                    <UploadCloud className="mr-2 h-4 w-4" />
+                    Upload Payment Slip
+                </Label>
+                <Input id="bankSlip" type="file" accept="image/*" {...register("bankSlip")} />
+                {errors.bankSlip && <p className="text-xs text-red-600">{errors.bankSlip.message as string}</p>}
+            </div>
+            <DialogFooter>
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                    {isSubmitting ? "Booking..." : "Confirm Booking"}
+                    {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
+            </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -13,6 +13,7 @@ import ManageBookingsPage from './pages/admin/ManageBookingsPage';
 import CreateClassPage from './pages/admin/CreateClassPage';
 import CreateMentorPage from './pages/admin/CreateMentorPage';
 import AllClassesPage from './pages/AllClassesPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 
 function App() {
   const { getToken } = useAuth();
@@ -35,7 +36,8 @@ function App() {
 
           {/* Admin Routes */}
           <Route path="/admin" element={<SignedIn><AdminLayout /></SignedIn>}>
-            <Route index element={<ManageBookingsPage />} />
+            <Route index element={<AdminDashboardPage />} /> {/* <-- SET AS DEFAULT */}
+            <Route path="dashboard" element={<AdminDashboardPage />} /> {/* <-- ADD THIS ROUTE */}
             <Route path="bookings" element={<ManageBookingsPage />} />
             <Route path="create-class" element={<CreateClassPage />} />
             <Route path="create-mentor" element={<CreateMentorPage />} />

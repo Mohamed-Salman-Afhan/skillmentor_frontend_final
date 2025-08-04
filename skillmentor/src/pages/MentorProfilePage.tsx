@@ -5,7 +5,9 @@ import type { MentorProfileResponse } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BookCopy, Briefcase, GraduationCap, DollarSign } from 'lucide-react';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function MentorProfilePage() {
     const { id } = useParams<{ id: string }>();
@@ -17,34 +19,71 @@ export default function MentorProfilePage() {
         }
     }, [id]);
 
-    if (!profile) return <div>Loading mentor profile...</div>;
+    if (!profile) return <LoadingSpinner />;
+
+    const { mentor, classes } = profile;
 
     return (
         <div>
-            <Button asChild variant="ghost" className="mb-4">
-                <Link to="/classes"><ArrowLeft className="mr-2 h-4 w-4"/>Back to Classes</Link>
+            <Button asChild variant="outline" className="mb-6">
+                <Link to="/classes"><ArrowLeft className="mr-2 h-4 w-4"/>Back to All Classes</Link>
             </Button>
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-                <Avatar className="w-32 h-32">
-                    <AvatarImage src={profile.mentor.imageUrl} />
-                    <AvatarFallback>{profile.mentor.firstName[0]}{profile.mentor.lastName[0]}</AvatarFallback>
-                </Avatar>
-                <div className="text-center md:text-left">
-                    <h1 className="text-4xl font-bold">{profile.mentor.firstName} {profile.mentor.lastName}</h1>
-                    <p className="text-xl text-muted-foreground mt-1">{profile.mentor.profession}</p>
-                    <p className="mt-4">{profile.mentor.bio}</p>
-                    <p className="mt-2"><span className="font-semibold">Qualifications:</span> {profile.mentor.qualification}</p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: Mentor Details */}
+                <div className="lg:col-span-1 space-y-6">
+                    <Card>
+                        <CardContent className="pt-6 flex flex-col items-center text-center">
+                            <Avatar className="w-24 h-24 mb-4">
+                                <AvatarImage src={mentor.imageUrl} />
+                                <AvatarFallback>{mentor.firstName[0]}{mentor.lastName[0]}</AvatarFallback>
+                            </Avatar>
+                            <h1 className="text-2xl font-bold">{mentor.firstName} {mentor.lastName}</h1>
+                            <p className="text-md text-muted-foreground">{mentor.title}</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader><CardTitle>Details</CardTitle></CardHeader>
+                        <CardContent className="space-y-4 text-sm">
+                            <div className="flex items-center">
+                                <Briefcase className="h-4 w-4 mr-3 text-muted-foreground" />
+                                <span>{mentor.profession}</span>
+                            </div>
+                            <div className="flex items-center">
+                                <GraduationCap className="h-4 w-4 mr-3 text-muted-foreground" />
+                                <span>{mentor.qualification}</span>
+                            </div>
+                            <div className="flex items-center font-semibold text-primary">
+                                <DollarSign className="h-4 w-4 mr-3" />
+                                <span>Rs. {Number(mentor.sessionFee).toLocaleString('en-US')} / session</span>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
-            </div>
-            <div className="mt-12">
-                <h2 className="text-2xl font-bold mb-4">Classes Taught</h2>
-                <div className="space-y-3">
-                    {profile.classes.map(c => (
-                        <div key={c.name} className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                           <span className="font-medium">{c.name}</span>
-                           <Badge>{c.studentCount} students booked</Badge>
-                        </div>
-                    ))}
+
+                {/* Right Column: Bio and Classes */}
+                <div className="lg:col-span-2 space-y-6">
+                     <Card>
+                        <CardHeader><CardTitle>About Me</CardTitle></CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">{mentor.bio}</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader><CardTitle>Classes Taught</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                            {classes.map(c => (
+                                <div key={c.name} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                                    <div className="flex items-center">
+                                        <BookCopy className="h-5 w-5 mr-3 text-primary" />
+                                        <span className="font-medium">{c.name}</span>
+                                    </div>
+                                   <Badge variant="secondary">{c.studentCount} students booked</Badge>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>
